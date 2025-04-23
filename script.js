@@ -39,6 +39,9 @@ var vizInit = function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x000000, 1);
 
+        console.log('EffectComposer available:', !!THREE.EffectComposer);
+        console.log('RenderPass available:', !!THREE.RenderPass);
+        console.log('UnrealBloomPass available:', !!THREE.UnrealBloomPass);
         var composer = new THREE.EffectComposer(renderer);
         composer.addPass(new THREE.RenderPass(scene, camera));
         var bloomPass = new THREE.UnrealBloomPass(

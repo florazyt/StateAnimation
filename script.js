@@ -39,8 +39,10 @@ var vizInit = function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x000000, 1);
 
+        console.log('POSTPROCESSING object:', POSTPROCESSING); // Debug: Inspect the POSTPROCESSING namespace
         var composer = new POSTPROCESSING.EffectComposer(renderer);
         composer.addPass(new POSTPROCESSING.RenderPass(scene, camera));
+        console.log('UnrealBloomPass available:', !!POSTPROCESSING.UnrealBloomPass); // Debug: Check if UnrealBloomPass exists
         var bloomPass = new POSTPROCESSING.UnrealBloomPass(
           new THREE.Vector2(window.innerWidth, window.innerHeight),
           1.5, // strength

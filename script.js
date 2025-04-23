@@ -27,19 +27,8 @@ var vizInit = function () {
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.getElementById('out').appendChild(renderer.domElement);
 
-      var planeGeometry = new THREE.PlaneGeometry(800, 800, 20, 20);
-      var planeMaterial = new THREE.MeshLambertMaterial({ color: 0x6904ce, side: THREE.DoubleSide, wireframe: true });
-      var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane.rotation.x = -0.5 * Math.PI;
-      plane.position.set(0, 30, 0);
-      group.add(plane);
-      var plane2 = new THREE.Mesh(planeGeometry, planeMaterial);
-      plane2.rotation.x = -0.5 * Math.PI;
-      plane2.position.set(0, -30, 0);
-      group.add(plane2);
-
       var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 4);
-      var lambertMaterial = new THREE.MeshLambertMaterial({ color: 0xff00ee, wireframe: true });
+      var lambertMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, wireframe: true });
       var ball = new THREE.Mesh(icosahedronGeometry, lambertMaterial);
       ball.position.set(0, 0, 0);
       group.add(ball);
@@ -68,8 +57,6 @@ var vizInit = function () {
         var lowerMaxFr = lowerMax / lowerHalfArray.length;
         var upperAvgFr = upperAvg / upperHalfArray.length;
 
-        makeRoughGround(plane, modulate(upperAvgFr, 0, 1, 0.5, 4));
-        makeRoughGround(plane2, modulate(lowerMaxFr, 0, 1, 0.5, 4));
         makeRoughBall(ball, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 
         group.rotation.y += 0.005;

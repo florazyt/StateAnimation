@@ -49,3 +49,20 @@ html, body {
   background: var(--paperColorDark);
   transform: translate3d(-50%, -45%, 0);
 }
+
+.top-left-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 0.5rem 1rem;
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.top-left-button.active {
+  background: #00ff88;
+  color: #000;
+}

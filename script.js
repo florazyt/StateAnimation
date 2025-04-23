@@ -9,9 +9,18 @@ var vizInit = function() {
   };
 
   function startMicrophone() {
+    var context = new AudioContext();
+    console.log('Initial AudioContext state:', context.state);
+    if (context.state === 'suspended') {
+      context.resume().then(() => {
+        console.log('AudioContext resumed successfully');
+      }).catch(err => {
+        console.error('Failed to resume AudioContext:', err);
+      });
+    }
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(function(stream) {
-        var context = new AudioContext();
+        console.log('Microphone stream acquired');
         var src = context.createMediaStreamSource(stream);
         var analyser = context.createAnalyser();
         src.connect(analyser);
@@ -72,6 +81,7 @@ var vizInit = function() {
 
         function render() {
           analyser.getByteFrequencyData(dataArray);
+          console.log('Frequency Data Sample:', dataArray.slice(0, 10));
 
           var lowerHalfArray = dataArray.slice(0, (dataArray.length / 2) - 1);
           var upperHalfArray = dataArray.slice((dataArray.length / 2) - 1, dataArray.length - 1);
@@ -98,24 +108,26 @@ var vizInit = function() {
         }
 
         function makeRoughBall(mesh, bassFr, treFr) {
-          mesh.geometry.vertices.forEach(function(vertex, i) {
+          var positionAttribute = mesh.geometry.attributes.position;
+          for (let i = 0; i < positionAttribute.count; i++) {
+            var vertex = new THREE.Vector3();
+            vertex.fromBufferAttribute(positionAttribute, i);
+            vertex.normalize();
             var offset = mesh.geometry.parameters.radius;
             var amp = 7;
             var time = window.performance.now();
-            vertex.normalize();
             var rf = 0.00001;
             var distance = (offset + bassFr) + noise.noise3D(vertex.x + time * rf * 7, vertex.y + time * rf * 8, vertex.z + time * rf * 9) * amp * treFr;
             vertex.multiplyScalar(distance);
-          });
-          mesh.geometry.verticesNeedUpdate = true;
-          mesh.geometry.normalsNeedUpdate = true;
+            positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+          }
+          positionAttribute.needsUpdate = true;
           mesh.geometry.computeVertexNormals();
-          mesh.geometry.computeFaceNormals();
         }
       })
       .catch(function(err) {
         console.error('Microphone access failed: ', err);
-        alert('Failed to access microphone. Please allow microphone access.');
+        alert('Failed to access microphone: ' + err.message);
       });
   }
 };

@@ -66,3 +66,18 @@ html, body {
   background: #00ff88;
   color: #000;
 }
+
+#bloomLabel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  color: white;
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+#bloomSlider {
+  width: 150px;
+  margin-left: 10px;
+}
+

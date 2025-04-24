@@ -9,7 +9,13 @@
 <body>
   <div id="content">
     <button id="toggleListening" class="top-left-button">Listening</button>
+    <button id="playAudio" class="top-left-button" style="left: 160px;">Speaking</button>
+    <audio id="voicePlayer" src="IronVoice.m4a"></audio>
     <button id="startMic">Start Microphone</button>
+    <label id="bloomLabel">
+      Bloom 强度：
+      <input type="range" id="bloomSlider" min="0" max="3" step="0.1" value="1.5">
+    </label>
     <div id="out"></div>
   </div>
 
@@ -17,6 +23,13 @@
   <script src='https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js'></script>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.3/dat.gui.min.js'></script>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.3.0/simplex-noise.min.js'></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/shaders/ConvolutionShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/postprocessing/BloomPass.js"></script>
+
   <script src="./script.js"></script>
 </body>
 </html>

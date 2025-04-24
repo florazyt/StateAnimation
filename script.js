@@ -6,14 +6,50 @@ var noise = new SimplexNoise();
 
 var vizInit = function () {
   const startButton = document.getElementById("startMic");
+  
+  const playButton = document.getElementById("playAudio");
+  const audio = document.getElementById("voicePlayer");
   const toggleButton = document.getElementById("toggleListening");
 
-  // 设置 toggle 按钮行为
+  let isSpeaking = false;
+  let listening = false;
+  audio.loop = true;
+
+  playButton.onclick = function () {
+    if (listening) {
+      listening = false;
+      toggleButton.textContent = "Not Listening";
+      toggleButton.classList.remove("active");
+    }
+
+    if (isSpeaking) {
+      audio.pause();
+      playButton.classList.remove("active");
+      playButton.textContent = "Speaking";
+    } else {
+      audio.currentTime = 0;
+      audio.play();
+      playButton.classList.add("active");
+      playButton.textContent = "Silence";
+    }
+    isSpeaking = !isSpeaking;
+  };
+
   toggleButton.onclick = function () {
+    if (isSpeaking) {
+      audio.pause();
+      isSpeaking = false;
+      playButton.textContent = "Speaking";
+      playButton.classList.remove("active");
+    }
+
     listening = !listening;
     toggleButton.textContent = listening ? "Listening" : "Not Listening";
     toggleButton.classList.toggle("active", listening);
   };
+
+
+
 
   startButton.onclick = function () {
     startButton.style.display = 'none';
@@ -41,60 +77,82 @@ var vizInit = function () {
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.getElementById('out').appendChild(renderer.domElement);
 
+      const composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+
+      const bloomPass = new THREE.BloomPass(1.5, 25, 4.0, 256);
+      const bloomSlider = document.getElementById('bloomSlider');
+      bloomSlider.addEventListener('input', () => {
+        const sliderValue = parseFloat(bloomSlider.value);
+        bloomPass.copyUniforms.opacity.value = bloomEnabled ? sliderValue : 0;
+      });
+      composer.addPass(bloomPass);
+
+      const copyPass = new THREE.ShaderPass(THREE.CopyShader);
+      copyPass.renderToScreen = true;
+      composer.addPass(copyPass);
+
       const icosahedronGeometry = new THREE.IcosahedronGeometry(10, 4);
       const lambertMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, wireframe: true });
+      
       const ball = new THREE.Mesh(icosahedronGeometry, lambertMaterial);
-      ball.position.set(0, 0, 0);
       group.add(ball);
 
-      const ambientLight = new THREE.AmbientLight(0xaaaaaa);
-      scene.add(ambientLight);
-      const spotLight = new THREE.SpotLight(0xffffff);
-      spotLight.intensity = 0.9;
+      // Add planet ring
+      
+      const ringGeometry = new THREE.TorusGeometry(13, 0.5, 16, 100);
+      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.0 });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      group.add(ring);
+
+
+      scene.add(new THREE.AmbientLight(0xaaaaaa));
+      const spotLight = new THREE.SpotLight(0xffffff, 0.9);
       spotLight.position.set(-10, 40, 20);
       spotLight.lookAt(ball);
-      spotLight.castShadow = true;
       scene.add(spotLight);
       scene.add(group);
 
-      window.addEventListener('resize', onWindowResize, false);
-      render();
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
 
       function render() {
         analyser.getByteFrequencyData(dataArray);
-        const lowerHalfArray = dataArray.slice(0, (dataArray.length / 2) - 1);
-        const upperHalfArray = dataArray.slice((dataArray.length / 2) - 1, dataArray.length - 1);
+        const lowerHalfArray = dataArray.slice(0, bufferLength / 2);
+        const upperHalfArray = dataArray.slice(bufferLength / 2);
         const lowerMax = max(lowerHalfArray);
         const upperAvg = avg(upperHalfArray);
         const lowerMaxFr = lowerMax / lowerHalfArray.length;
         const upperAvgFr = upperAvg / upperHalfArray.length;
 
-        if (listening) {
-          smoothedBass = smoothedBass * 0.9 + modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8) * 0.1;
-          smoothedTreble = smoothedTreble * 0.9 + modulate(upperAvgFr, 0, 1, 0, 4) * 0.1;
-        } else {
-          const targetBass = listening ? modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8) : 0;
-          const targetTreble = listening ? modulate(upperAvgFr, 0, 1, 0, 4) : 0;
-
-          smoothedBass = smoothedBass * 0.9 + targetBass * 0.1;
-          smoothedTreble = smoothedTreble * 0.9 + targetTreble * 0.1;
-
-        }
+        const targetBass = listening ? modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8) : 0;
+        const targetTreble = listening ? modulate(upperAvgFr, 0, 1, 0, 4) : 0;
+        smoothedBass = smoothedBass * 0.9 + targetBass * 0.1;
+        smoothedTreble = smoothedTreble * 0.9 + targetTreble * 0.1;
 
         makeRoughBall(ball, smoothedBass, smoothedTreble);
         group.rotation.y += 0.005;
-        renderer.render(scene, camera);
+        
+        if (isSpeaking) {
+          ringMaterial.opacity = Math.min(1, ringMaterial.opacity + 0.05);
+          ring.rotation.x += 0.005;
+          ring.rotation.y += 0.003;
+          ring.rotation.z += 0.002;
+        } else {
+          ringMaterial.opacity = Math.max(0, ringMaterial.opacity - 0.05);
+        }
+    
+        composer.render();
         requestAnimationFrame(render);
       }
 
-      function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
+      render();
 
       function makeRoughBall(mesh, bassFr, treFr) {
-        mesh.geometry.vertices.forEach(function (vertex) {
+        mesh.geometry.vertices.forEach(vertex => {
           const offset = mesh.geometry.parameters.radius;
           const amp = 10;
           const time = window.performance.now();
@@ -107,9 +165,6 @@ var vizInit = function () {
         mesh.geometry.computeVertexNormals();
         mesh.geometry.computeFaceNormals();
       }
-    }).catch(function (err) {
-      console.error("Microphone error:", err);
-      alert("⚠️ 无法访问麦克风，请确认权限是否开启，并检查设备设置。");
     });
   }
 };
@@ -120,14 +175,12 @@ function fractionate(val, minVal, maxVal) {
   return (val - minVal) / (maxVal - minVal);
 }
 function modulate(val, minVal, maxVal, outMin, outMax) {
-  var fr = fractionate(val, minVal, maxVal);
-  var delta = outMax - outMin;
-  return outMin + (fr * delta);
+  const fr = fractionate(val, minVal, maxVal);
+  return outMin + (fr * (outMax - outMin));
 }
 function avg(arr) {
-  var total = arr.reduce(function (sum, b) { return sum + b; });
-  return (total / arr.length);
+  return arr.reduce((sum, b) => sum + b, 0) / arr.length;
 }
 function max(arr) {
-  return arr.reduce(function (a, b) { return Math.max(a, b); });
+  return arr.reduce((a, b) => Math.max(a, b));
 }

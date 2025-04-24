@@ -1,6 +1,41 @@
 let listening = false;
 let smoothedBass = 0;
 let smoothedTreble = 0;
+let bloomEnabled = true;
+
+const fresnelMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    color1: { value: new THREE.Color(0x00ffff) }, // 青绿色
+    color2: { value: new THREE.Color(0x0033ff) }, // 蓝色
+    viewVector: { value: new THREE.Vector3() }
+  },
+  vertexShader: `
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      vViewPosition = -mvPosition.xyz;
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 color1;
+    uniform vec3 color2;
+    uniform vec3 viewVector;
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    void main() {
+      float fresnel = abs(dot(normalize(vViewPosition), vNormal));
+      fresnel = pow(1.0 - fresnel, 2.0);
+      vec3 color = mix(color1, color2, fresnel);
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `,
+  wireframe: true
+
+});
+
 
 var noise = new SimplexNoise();
 
@@ -10,6 +45,12 @@ var vizInit = function () {
   const playButton = document.getElementById("playAudio");
   const audio = document.getElementById("voicePlayer");
   const toggleButton = document.getElementById("toggleListening");
+  const bloomToggle = document.getElementById("toggleBloom");
+bloomToggle.onclick = function () {
+  bloomEnabled = !bloomEnabled;
+  bloomToggle.textContent = bloomEnabled ? "Bloom ON" : "Bloom OFF";
+};
+
 
   let isSpeaking = false;
   let listening = false;
@@ -84,8 +125,9 @@ var vizInit = function () {
       const bloomSlider = document.getElementById('bloomSlider');
       bloomSlider.addEventListener('input', () => {
         const sliderValue = parseFloat(bloomSlider.value);
-        bloomPass.copyUniforms.opacity.value = bloomEnabled ? sliderValue : 0;
-      });
+        bloomPass.enabled = bloomEnabled;
+        bloomPass.copyUniforms.opacity.value = parseFloat(bloomSlider.value);
+              });
       composer.addPass(bloomPass);
 
       const copyPass = new THREE.ShaderPass(THREE.CopyShader);
@@ -93,9 +135,8 @@ var vizInit = function () {
       composer.addPass(copyPass);
 
       const icosahedronGeometry = new THREE.IcosahedronGeometry(10, 4);
-      const lambertMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, wireframe: true });
-      
-      const ball = new THREE.Mesh(icosahedronGeometry, lambertMaterial);
+      const ball = new THREE.Mesh(icosahedronGeometry, fresnelMaterial);
+
       group.add(ball);
 
       // Add planet ring
@@ -144,7 +185,12 @@ var vizInit = function () {
         } else {
           ringMaterial.opacity = Math.max(0, ringMaterial.opacity - 0.05);
         }
-    
+        bloomPass.enabled = bloomEnabled;
+if (bloomEnabled) {
+  bloomPass.copyUniforms.opacity.value = parseFloat(bloomSlider.value);
+}
+
+
         composer.render();
         requestAnimationFrame(render);
       }
